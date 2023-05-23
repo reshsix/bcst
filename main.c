@@ -150,7 +150,7 @@ publish(const char *path)
     while (ret && running)
     {
         int in = STDIN_FILENO;
-        struct pollfd pfds[2] = {[0] = {.fd = in, .events = POLLIN},
+        struct pollfd pfds[2] = {[0] = {.fd = in, .events = POLLIN | POLLHUP},
                                  [1] = {.fd = s,  .events = POLLIN}};
         if (poll(pfds, 2, -1) >= 0)
         {
@@ -194,6 +194,8 @@ publish(const char *path)
                     break;
                 }
             }
+            else if (pfds[0].revents & POLLHUP)
+                break;
 
             if (pfds[1].revents & POLLIN)
             {
