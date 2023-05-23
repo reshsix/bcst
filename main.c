@@ -51,8 +51,15 @@ realloc_f(void *mem, size_t count, size_t *size)
 {
     void *ret = mem;
 
-    while (ret && count >= *size)
-        ret = realloc_s(ret, *size *= 2);
+    size_t size2 = *size;
+    while (count >= size2)
+        size2 *= 2;
+
+    if (size2 != *size)
+    {
+        ret = realloc_s(ret, size2);
+        *size = size2;
+    }
 
     return ret;
 }
@@ -156,9 +163,12 @@ publish(const char *path)
                     read(STDIN_FILENO, &(buf[buf_c]), bytes);
                     buf_c += bytes;
 
-                    char *end = strchr(buf, '\n');
-                    if (end)
+                    while (true)
                     {
+                        char *end = memchr(buf, '\n', buf_c);
+                        if (!end)
+                            break;
+
                         size_t length = end - buf + 1;
                         for (size_t i = 0; i < subs_c / sizeof(int); i++)
                         {
@@ -174,6 +184,8 @@ publish(const char *path)
 
                         buf_c -= length;
                         memmove(buf, &(end[1]), buf_c);
+                        if (buf_c == 0)
+                            break;
                     }
                 }
                 else
@@ -257,15 +269,19 @@ subscribe(const char *path)
                     read(s, &(buf[buf_c]), bytes);
                     buf_c += bytes;
 
-                    char *end = strchr(buf, '\n');
-                    if (end)
+                    while (true)
                     {
-                        size_t length = end - buf + 1;
+                        char *end = memchr(buf, '\n', buf_c);
+                        if (!end)
+                            break;
 
-                        write(STDOUT_FILENO, buf, bytes);
+                        size_t length = end - buf + 1;
+                        write(STDOUT_FILENO, buf, length);
 
                         buf_c -= length;
                         memmove(buf, &(end[1]), buf_c);
+                        if (buf_c == 0)
+                            break;
                     }
                 }
                 else
